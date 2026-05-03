@@ -2,5 +2,5 @@ dash
 plotly
 pandas
 gunicorn
-#statsmodels
+statsmodels
 numpy
