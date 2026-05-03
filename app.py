@@ -7,7 +7,7 @@ import numpy as np
 import sqlite3
 from datetime import datetime
 
-# Connect to yoruba database
+# Connect to database
 conn = sqlite3.connect('yoruba_platform.db')
 
 # ========== LOAD ALL QUERIES ==========
@@ -181,15 +181,32 @@ fig5.update_layout(font_family=FONT, legend_title=dict(text='<b>Key</b>', font=d
 fig5.update_traces(hovertemplate='<b>%{label}</b><br>Contributions: %{value}<br>Percentage: %{percent}<extra></extra>')
 
 # ========== REUSABLE COMPONENTS ==========
+def add_total_row(df):
+    """Add a TOTAL row for numeric sum columns, leave averages/percentages blank"""
+    total_row = {}
+    for col in df.columns:
+        if col in df.select_dtypes(include=['number']).columns:
+            col_lower = col.lower()
+            # Sum countable columns, leave rates/averages/percentages blank
+            if any(word in col_lower for word in ['avg', 'rate', 'score', 'time', '%']):
+                total_row[col] = ''
+            else:
+                total_row[col] = df[col].sum()
+        else:
+            total_row[col] = 'TOTAL' if df.columns.get_loc(col) == 0 else ''
+    return pd.concat([df, pd.DataFrame([total_row])], ignore_index=True)
+
 def make_table(df, table_id):
+    df_with_total = add_total_row(df)
     return dash_table.DataTable(
-        id=table_id, data=df.to_dict('records'),
-        columns=[{"name": i, "id": i} for i in df.columns],
+        id=table_id, data=df_with_total.to_dict('records'),
+        columns=[{"name": i, "id": i} for i in df_with_total.columns],
         sort_action='native', filter_action='native', export_format='csv',
         style_table={'marginTop': '10px', 'overflowX': 'auto'},
         style_header={'fontWeight': 'bold', 'backgroundColor': '#f0f0f0', 'fontFamily': FONT},
         style_cell={'textAlign': 'center', 'padding': '8px', 'fontFamily': FONT, 'fontSize': '13px'},
-        page_size=15)
+        style_data_conditional=[{'if': {'filter_query': '{' + df.columns[0] + '} = "TOTAL"'}, 'fontWeight': 'bold', 'backgroundColor': '#e8f4e8'}],
+        page_size=20)
 
 def kpi_card(title, value, color='#2E86AB'):
     return html.Div(style={
@@ -220,7 +237,6 @@ server = app.server
 
 app.layout = html.Div(style={'fontFamily': FONT, 'maxWidth': '1200px', 'margin': '0 auto', 'padding': '30px', 'backgroundColor': '#FAFAFA'}, children=[
 
-    # https://developers.google.com/fonts/docs/getting_started
     html.Link(href='https://fonts.googleapis.com/css2?family=EB+Garamond:wght@400;600;700&display=swap', rel='stylesheet'),
 
     # Header
@@ -392,12 +408,7 @@ app.layout = html.Div(style={'fontFamily': FONT, 'maxWidth': '1200px', 'margin':
 ])
 
 # ========== CALLBACKS ==========
-'''
-https://www.w3schools.com/js/js_callback.asp
-https://dash.plotly.com/basic-callbacks
-https://dash.plotly.com/advanced-callbacks
 
-'''
 # Section 1
 @callback([Output('location-chart', 'figure'), Output('stats-panel-1', 'children')],
           [Input('location-filter', 'value'), Input('stat-1', 'value')])
