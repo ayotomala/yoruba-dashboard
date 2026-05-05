@@ -132,7 +132,7 @@ def style_fig(fig, xtitle='', ytitle=''):
         legend_title=dict(text='<b>Key</b>', font=dict(size=14)),
         legend_font=dict(size=11), clickmode='event+select', hovermode='closest'
     )
-    # Fix hover for bar charts - show clean labels not raw variable names
+    # Fix hover for bar charts - displays formatted labels not raw variable names
     for trace in fig.data:
         if hasattr(trace, 'type') and trace.type == 'bar':
             name = trace.name if trace.name else ''
@@ -187,7 +187,7 @@ def add_total_row(df):
     for col in df.columns:
         if col in df.select_dtypes(include=['number']).columns:
             col_lower = col.lower()
-            # Sum countable columns, leave rates/averages/percentages blank
+
             if any(word in col_lower for word in ['avg', 'rate', 'score', 'time', '%']):
                 total_row[col] = ''
             else:
@@ -262,7 +262,7 @@ app.layout = html.Div(style={'fontFamily': FONT, 'maxWidth': '1200px', 'margin':
                style={'fontSize': '1.05em', 'lineHeight': '1.7', 'marginBottom': '18px'}),
         html.Div(style={'display': 'grid', 'gridTemplateColumns': '1fr 1fr', 'gap': '15px'}, children=[
             html.Div([html.P(html.Strong("Data Source"), style={'marginBottom': '5px'}),
-                html.P("281 records across 9 SQLite tables. Synthetic user data + authentic Yoruba linguistic content.", style={'fontSize': '0.9em', 'color': '#555'})]),
+                html.P("~2000 records across 9 SQLite tables. Synthetic user data + authentic Yoruba linguistic content.", style={'fontSize': '0.9em', 'color': '#555'})]),
             html.Div([html.P(html.Strong("How to Interact"), style={'marginBottom': '5px'}),
                 html.P("Hover for details. Click legend to isolate. Drag to zoom, double-click to reset. Use dropdowns to filter. Tables sortable, filterable, exportable to CSV.", style={'fontSize': '0.9em', 'color': '#555'})]),
         ])
@@ -401,9 +401,22 @@ app.layout = html.Div(style={'fontFamily': FONT, 'maxWidth': '1200px', 'margin':
     analysis_brief('brief-8'),
     html.Div(style={'marginBottom': '50px'}),
 
+    # ===== SECTION 9: MONTE CARLO SIMULATION =====
+    html.H3('Projected Learner Growth: Monte Carlo Simulation', style={'textAlign': 'center', 'fontWeight': '700', 'marginTop': '40px', 'fontSize': '1.4em'}),
+    html.P("Runs 1,000 simulated growth scenarios over 12 quarters using ±6.2% variance derived from Duolingo's quarterly MAU standard deviation (Statista, 2026). Demonstrates prescriptive analytics for strategic platform planning.",
+           style={'textAlign': 'center', 'color': '#555', 'fontSize': '0.95em', 'maxWidth': '800px', 'margin': '0 auto 5px auto'}),
+    html.A("Source: Statista — Duolingo Quarterly MAU (2020-2025)", href="https://www.statista.com/statistics/1309610/duolingo-quarterly-mau/", target="_blank",
+           style={'display': 'block', 'textAlign': 'center', 'color': '#2E86AB', 'fontSize': '0.8em', 'marginBottom': '15px'}),
+    dcc.Graph(id='monte-carlo-chart', config={'displayModeBar': True, 'displaylogo': False}),
+    html.Div(id='monte-carlo-stats', style={
+        'display': 'flex', 'justifyContent': 'center', 'gap': '30px', 'marginTop': '15px',
+        'backgroundColor': '#fff', 'padding': '12px 20px', 'borderRadius': '6px', 'border': '1px solid #e0e0e0'
+    }),
+    html.Div(style={'marginBottom': '50px'}),
+
     # Footer
     html.Hr(style={'marginTop': '40px'}),
-    html.P("Built with Python Dash & Plotly · 281 records, 9 SQLite tables · Hosted on Render · Yoruba Diaspora Learning Platform © 2026",
+    html.P("Built with Python Dash & Plotly · ~2,000 records, 9 SQLite tables · Hosted on Render · Yoruba Diaspora Learning Platform © 2026",
            style={'textAlign': 'center', 'color': '#888', 'fontSize': '0.85em', 'marginTop': '15px'})
 ])
 
@@ -499,6 +512,67 @@ def update_s8(stat):
         html.Span([html.Strong('Levels: '), str(len(q8))], style={'fontSize': '0.95em'}),
     ]
     return fig, stats
+
+# Section 9: Monte Carlo Simulation
+np.random.seed(42)  # Fixed seed for reproducibility
+current_learners = int(total_learners)
+quarters_ahead = 12 # Prediction for next 3 years
+n_simulations = 1000
+variance = 0.062  # ±6.2% quarterly std dev from Duolingo MAU data (Statista, 2026) https://www.statista.com/statistics/1309610/duolingo-quarterly-mau/?srsltid=AfmBOopFJ_7sbldeUeIegGMx5jJDSE1wq2ydHry-ChJ6tE5g90oS60C1
+mean_growth = 0.067  # 6.7% mean quarterly growth from Duolingo data
+
+# Run simulations
+all_paths = np.zeros((n_simulations, quarters_ahead + 1))
+all_paths[:, 0] = current_learners
+
+for sim in range(n_simulations):
+    for q in range(1, quarters_ahead + 1):
+        growth_rate = np.random.normal(mean_growth, variance)
+        all_paths[sim, q] = all_paths[sim, q-1] * (1 + growth_rate)
+
+# Calculate percentiles
+p5 = np.percentile(all_paths, 5, axis=0)
+p25 = np.percentile(all_paths, 25, axis=0)
+p50 = np.percentile(all_paths, 50, axis=0)
+p75 = np.percentile(all_paths, 75, axis=0)
+p95 = np.percentile(all_paths, 95, axis=0)
+
+quarters = [f'Q{((i-1)%4)+1} {2026 + (i-1)//4}' if i > 0 else 'Now' for i in range(quarters_ahead + 1)]
+
+# Build Monte Carlo figure
+mc_fig = go.Figure()
+mc_fig.add_trace(go.Scatter(x=quarters, y=p95, mode='lines', line=dict(width=0), showlegend=False, name='95th Percentile', hoverinfo='skip'))
+mc_fig.add_trace(go.Scatter(x=quarters, y=p5, mode='lines', line=dict(width=0), fill='tonexty',
+                            fillcolor='rgba(46,134,171,0.15)', name='90% Confidence Band', hovertemplate='90% Band Lower: %{y:.0f}<extra></extra>'))
+mc_fig.add_trace(go.Scatter(x=quarters, y=p75, mode='lines', line=dict(width=0), showlegend=False, name='75th Percentile', hoverinfo='skip'))
+mc_fig.add_trace(go.Scatter(x=quarters, y=p25, mode='lines', line=dict(width=0), fill='tonexty',
+                            fillcolor='rgba(46,134,171,0.3)', name='50% Confidence Band', hovertemplate='50% Band Lower: %{y:.0f}<extra></extra>'))
+mc_fig.add_trace(go.Scatter(x=quarters, y=p50, mode='lines', line=dict(color='#2E86AB', width=3),
+                            name='Median Projection', hovertemplate='Median: %{y:.0f} learners<extra></extra>'))
+mc_fig.update_layout(
+    font_family=FONT, plot_bgcolor='#FAFAFA', paper_bgcolor='#FAFAFA',
+    xaxis_title=dict(text='<b>Quarter</b>', font=dict(size=14)),
+    yaxis_title=dict(text='<b>Projected Active Learners</b>', font=dict(size=14)),
+    legend_title=dict(text='<b>Key</b>', font=dict(size=14)),
+    hovermode='x unified'
+)
+
+# Update the monte carlo graph and stats in layout
+app.layout.children[-4].children = dcc.Graph(figure=mc_fig, config={'displayModeBar': True, 'displaylogo': False})
+
+
+for i, child in enumerate(app.layout.children):
+    if hasattr(child, 'id') and child.id == 'monte-carlo-chart':
+        app.layout.children[i] = dcc.Graph(figure=mc_fig, id='monte-carlo-chart', config={'displayModeBar': True, 'displaylogo': False})
+    if hasattr(child, 'id') and child.id == 'monte-carlo-stats':
+        app.layout.children[i] = html.Div(style={
+            'display': 'flex', 'justifyContent': 'center', 'gap': '30px', 'marginTop': '15px',
+            'backgroundColor': '#fff', 'padding': '12px 20px', 'borderRadius': '6px', 'border': '1px solid #e0e0e0'
+        }, children=[
+            html.Span([html.Strong('Median (3 yrs): '), f'{int(p50[-1])} learners'], style={'fontSize': '0.95em'}),
+            html.Span([html.Strong('90% Range: '), f'{int(p5[-1])} – {int(p95[-1])} learners'], style={'fontSize': '0.95em'}),
+            html.Span([html.Strong('Simulations: '), '1,000'], style={'fontSize': '0.95em'}),
+        ])
 
 if __name__ == '__main__':
     app.run(debug=True)
