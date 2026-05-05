@@ -4,7 +4,7 @@ Interactive Business Intelligence dashboard built with Python Dash and Plotly, v
 
 ## Tech Stack
 - Python3 | Dash | Plotly
-- SQLite database (250+ records, 9 tables)
+- SQLite database (~2000 records, 9 tables)
 - Hosted on Render
 
 ## Run Locally
