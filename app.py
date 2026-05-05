@@ -414,6 +414,7 @@ app.layout = html.Div(style={'fontFamily': FONT, 'maxWidth': '1200px', 'margin':
         'display': 'flex', 'justifyContent': 'center', 'gap': '30px', 'marginTop': '15px',
         'backgroundColor': '#fff', 'padding': '12px 20px', 'borderRadius': '6px', 'border': '1px solid #e0e0e0'
     }),
+    analysis_brief('brief-9'),
     html.Div(style={'marginBottom': '50px'}),
 
     # Footer
@@ -545,10 +546,14 @@ quarters = [f'Q{((i-1)%4)+1} {2026 + (i-1)//4}' if i > 0 else 'Now' for i in ran
 mc_fig = go.Figure()
 mc_fig.add_trace(go.Scatter(x=quarters, y=p95, mode='lines', line=dict(width=0), showlegend=False, name='95th Percentile', hoverinfo='skip'))
 mc_fig.add_trace(go.Scatter(x=quarters, y=p5, mode='lines', line=dict(width=0), fill='tonexty',
-                            fillcolor='rgba(46,134,171,0.15)', name='90% Confidence Band', hovertemplate='90% Band Lower: %{y:.0f}<extra></extra>'))
+                            fillcolor='rgba(46,134,171,0.15)', name='90% Confidence Band',
+                            customdata=list(zip(p5, p95)),
+                            hovertemplate='90% Band (5th–95th): %{customdata[0]:.0f} – %{customdata[1]:.0f}<extra></extra>'))
 mc_fig.add_trace(go.Scatter(x=quarters, y=p75, mode='lines', line=dict(width=0), showlegend=False, name='75th Percentile', hoverinfo='skip'))
 mc_fig.add_trace(go.Scatter(x=quarters, y=p25, mode='lines', line=dict(width=0), fill='tonexty',
-                            fillcolor='rgba(46,134,171,0.3)', name='50% Confidence Band', hovertemplate='50% Band Lower: %{y:.0f}<extra></extra>'))
+                            fillcolor='rgba(46,134,171,0.3)', name='50% Confidence Band',
+                            customdata=list(zip(p25, p75)),
+                            hovertemplate='50% Band (25th–75th): %{customdata[0]:.0f} – %{customdata[1]:.0f}<extra></extra>'))
 mc_fig.add_trace(go.Scatter(x=quarters, y=p50, mode='lines', line=dict(color='#2E86AB', width=3),
                             name='Median Projection', hovertemplate='Median: %{y:.0f} learners<extra></extra>'))
 mc_fig.update_layout(
@@ -560,7 +565,6 @@ mc_fig.update_layout(
 )
 
 # Update the monte carlo graph and stats in layout
-app.layout.children[-4].children = dcc.Graph(figure=mc_fig, config={'displayModeBar': True, 'displaylogo': False})
 
 
 for i, child in enumerate(app.layout.children):
