@@ -132,7 +132,7 @@ def style_fig(fig, xtitle='', ytitle=''):
         legend_title=dict(text='<b>Key</b>', font=dict(size=14)),
         legend_font=dict(size=11), clickmode='event+select', hovermode='closest'
     )
-    # Fix hover for bar charts - displays formatted labels not raw variable names
+    # Fix hover for bar charts - show clean labels not raw variable names
     for trace in fig.data:
         if hasattr(trace, 'type') and trace.type == 'bar':
             name = trace.name if trace.name else ''
@@ -187,7 +187,7 @@ def add_total_row(df):
     for col in df.columns:
         if col in df.select_dtypes(include=['number']).columns:
             col_lower = col.lower()
-
+            # Sum countable columns, leave rates/averages/percentages blank
             if any(word in col_lower for word in ['avg', 'rate', 'score', 'time', '%']):
                 total_row[col] = ''
             else:
@@ -225,10 +225,12 @@ def stats_panel(panel_id):
 
 def analysis_brief(brief_id):
     return html.Details([
-        html.Summary('View Data Analysis Brief', style={'cursor': 'pointer', 'color': '#A23B72', 'fontWeight': '600', 'marginTop': '8px'}),
-        html.P(id=brief_id, children="[Analysis brief to be added after sample data finalisation]",
-               style={'fontSize': '0.9em', 'color': '#444', 'lineHeight': '1.6', 'padding': '10px', 'backgroundColor': '#fff',
-                      'borderRadius': '6px', 'border': '1px solid #e0e0e0', 'marginTop': '8px'})
+        html.Summary('Analyst Notes', style={'cursor': 'pointer', 'color': '#A23B72', 'fontWeight': '600', 'marginTop': '8px'}),
+        dcc.Textarea(id=brief_id, placeholder='Write your analytical observations here (max 1000 characters)...',
+                     maxLength=1000,
+                     style={'width': '100%', 'height': '80px', 'fontSize': '0.9em', 'fontFamily': FONT,
+                            'padding': '10px', 'borderRadius': '6px', 'border': '1px solid #e0e0e0',
+                            'marginTop': '8px', 'resize': 'vertical'})
     ])
 
 # ========== DASH APP ==========
