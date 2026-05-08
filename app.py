@@ -475,7 +475,7 @@ def update_s3(category, stat):
 def update_s6(stat):
     fig = px.bar(q6, x='Engagement Score', y='Display Name', orientation='h', color='Location',
                  color_discrete_sequence=['#2E86AB', '#A23B72', '#F18F01'])
-    fig = style_fig(fig, 'Engagement Score (composite)', '')
+    fig = style_fig(fig, 'Engagement Score (composite)', 'User')
     fig.update_traces(hovertemplate='<b>%{y}</b><br>Score: %{x}<extra></extra>')
     stats = [
         html.Span([html.Strong(f'{stat} Score: '), calc_stats(q6['Engagement Score'], stat, '')], style={'fontSize': '0.95em'}),
